@@ -1,0 +1,66 @@
+#! /bin/bash
+
+function usageAndExit() {
+    echo "Usage: $0 <mount|unmount|backup>"
+    exit -1
+}
+
+if [ $# -ne 1 ]; then
+    usageAndExit
+fi
+
+ARG=$1
+MOUNT_DIR='/Volumes/LaCie'
+DEV_NAME_DIR='~/.tm/lacie'
+DEV_NAME_PATTERN="^/dev/disk[0-9]+s[0-9]+$"
+
+function mountTimeMachineDisk() {
+    DEV_NAME=$(cat $DEV_NAME_DIR)
+
+    if [[ "$DEV_NAME" =~ $DEV_NAME_PATTERN ]]; then
+        diskutil mount "$DEV_NAME"
+    fi
+}
+
+function unmountTimeMachineDisk() {
+    DEV_NAME=$(mount | grep $MOUNT_DIR | awk '{print $1}')
+
+    if [[ "$DEV_NAME" =~ $DEV_NAME_PATTERN ]]; then
+        echo "$DEV_NAME" > $DEV_NAME_DIR
+        echo "$0: Saved \"$DEV_NAME\" into $DEV_NAME_DIR"
+        diskutil unmount "$DEV_NAME"
+    else
+        echo "$0: Nothing to unmount"
+    fi
+}
+
+function backupToTimeMachine() {
+    DEV_NAME=$(cat $DEV_NAME_DIR)
+
+    if [[ "$DEV_NAME" =~ $DEV_NAME_PATTERN ]]; then
+        diskutil mount "$DEV_NAME" && tmutil startbackup -b && diskutil unmount "$DEV_NAME"
+    else
+        echo "$0: Could not mount device \"$DEV_NAME\""
+    fi
+}
+
+case "$ARG" in
+
+    "mount")
+        mountTimeMachineDisk
+    ;;
+
+    "unmount")
+        unmountTimeMachineDisk
+    ;;
+
+    "backup")
+        backupToTimeMachine
+    ;;
+
+    *)
+        usageAndExit
+    ;;
+esac
+
+exit 0
